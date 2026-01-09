@@ -51,7 +51,7 @@ app.post('/translate', async (req, res) => {
         const targetLangName = languageNames[targetLanguage] || targetLanguage;
 
         // Get Gemini model
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
         // Create translation prompt
         const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:

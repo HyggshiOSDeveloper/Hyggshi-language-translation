@@ -117,7 +117,7 @@ export default {
 
         // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
         // Create translation prompt
         const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:\n${text}`;

@@ -1,4 +1,4 @@
-// server.js - Deploy this to Railway
+// server.js - Deploy this to cloudflare
 // npm install express cors @google/generative-ai dotenv
 
 const express = require('express');

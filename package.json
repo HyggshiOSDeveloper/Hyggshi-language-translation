@@ -2,7 +2,7 @@
   "name": "roblox-translation-api",
   "version": "1.0.0",
   "description": "Translation API for Roblox using Google Gemini on Cloudflare Workers",
-  "main": "src/index.js",
+  "main": "Index.js",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
@@ -14,10 +14,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.24.1"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.61.0"
   },
   "engines": {
     "node": ">=18.0.0"

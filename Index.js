@@ -24,6 +24,21 @@ const languageNames = {
   'hi': 'Hindi'
 };
 
+/**
+ * Helper for exponential backoff retries for API calls
+ */
+async function retryWithBackoff(fn, retries = 5) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      const delay = Math.pow(2, i) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
 export default {
   async fetch(request, env) {
     // Handle CORS
@@ -45,7 +60,7 @@ export default {
       return new Response(
         JSON.stringify({ 
           service: 'Roblox Translation API',
-          version: '1.0.0',
+          version: '1.0.1',
           endpoints: {
             translate: 'POST /translate',
             health: 'GET /health'
@@ -116,21 +131,21 @@ export default {
         const targetLangName = languageNames[targetLanguage] || targetLanguage;
 
         // Initialize Gemini AI
-        const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+        // Using the supported preview model for this environment
+        const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || "");
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
 
         // Create translation prompt
-        const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:\n${text}`;
+        const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:\n\n${text}`;
 
-        // Generate translation
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const translation = response.text().trim();
+        // Generate translation with retry logic
+        const result = await retryWithBackoff(() => model.generateContent(prompt));
+        const responseText = result.response.text().trim();
 
         // Return translation
         return new Response(
           JSON.stringify({
-            translation: translation,
+            translation: responseText,
             sourceText: text,
             targetLanguage: targetLangName
           }),

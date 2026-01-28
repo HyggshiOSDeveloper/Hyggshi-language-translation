@@ -24,21 +24,6 @@ const languageNames = {
   'hi': 'Hindi'
 };
 
-/**
- * Helper for exponential backoff retries for API calls
- */
-async function retryWithBackoff(fn, retries = 5) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (i === retries - 1) throw err;
-      const delay = Math.pow(2, i) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-}
-
 export default {
   async fetch(request, env) {
     // Handle CORS
@@ -60,7 +45,7 @@ export default {
       return new Response(
         JSON.stringify({ 
           service: 'Roblox Translation API',
-          version: '1.0.1',
+          version: '1.0.2',
           endpoints: {
             translate: 'POST /translate',
             health: 'GET /health'
@@ -128,24 +113,41 @@ export default {
           );
         }
 
+        // Check if API key exists
+        if (!env.GEMINI_API_KEY) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'API key not configured',
+              details: 'GEMINI_API_KEY environment variable is missing'
+            }),
+            { 
+              status: 500,
+              headers: { 
+                'Content-Type': 'application/json',
+                ...corsHeaders 
+              } 
+            }
+          );
+        }
+
         const targetLangName = languageNames[targetLanguage] || targetLanguage;
 
-        // Initialize Gemini AI
-        // Using the supported preview model for this environment
-        const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || "");
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
+        // Initialize Gemini AI with the correct model
+        const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         // Create translation prompt
         const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:\n\n${text}`;
 
-        // Generate translation with retry logic
-        const result = await retryWithBackoff(() => model.generateContent(prompt));
-        const responseText = result.response.text().trim();
+        // Generate translation
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const translation = response.text().trim();
 
         // Return translation
         return new Response(
           JSON.stringify({
-            translation: responseText,
+            translation: translation,
             sourceText: text,
             targetLanguage: targetLangName
           }),

@@ -129,7 +129,7 @@ export default {
           genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
           console.log('✅ GoogleGenerativeAI initialized');
           
-          model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+          model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
           console.log('✅ Model loaded: gemini-1.5-flash');
         } catch (initError) {
           console.error('❌ Failed to initialize Gemini:', initError.message);

@@ -45,7 +45,7 @@ export default {
       return new Response(
         JSON.stringify({ 
           service: 'Roblox Translation API',
-          version: '1.0.2',
+          version: '1.0.0',
           endpoints: {
             translate: 'POST /translate',
             health: 'GET /health'
@@ -65,7 +65,8 @@ export default {
       return new Response(
         JSON.stringify({ 
           status: 'ok', 
-          message: 'Translation service is running'
+          message: 'Translation service is running',
+          apiKeyConfigured: !!env.GEMINI_API_KEY
         }),
         { 
           headers: { 
@@ -79,6 +80,24 @@ export default {
     // Translation endpoint
     if (url.pathname === '/translate' && request.method === 'POST') {
       try {
+        // Check if API key exists FIRST
+        if (!env.GEMINI_API_KEY) {
+          console.error('GEMINI_API_KEY is not set');
+          return new Response(
+            JSON.stringify({ 
+              error: 'Server configuration error: API key not set',
+              details: 'The Gemini API key is missing. Run: npx wrangler secret put GEMINI_API_KEY'
+            }),
+            { 
+              status: 500,
+              headers: { 
+                'Content-Type': 'application/json',
+                ...corsHeaders 
+              } 
+            }
+          );
+        }
+
         const body = await request.json();
         const { text, targetLanguage } = body;
 
@@ -113,33 +132,18 @@ export default {
           );
         }
 
-        // Check if API key exists
-        if (!env.GEMINI_API_KEY) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'API key not configured',
-              details: 'GEMINI_API_KEY environment variable is missing'
-            }),
-            { 
-              status: 500,
-              headers: { 
-                'Content-Type': 'application/json',
-                ...corsHeaders 
-              } 
-            }
-          );
-        }
-
         const targetLangName = languageNames[targetLanguage] || targetLanguage;
 
-        // Initialize Gemini AI with the correct model
+        // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+        
+        // Use stable model (gemini-1.5-flash is more reliable than experimental)
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         // Create translation prompt
-        const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:\n\n${text}`;
+        const prompt = `Translate the following text to ${targetLangName}. Only provide the translation, no explanations or additional text:\n${text}`;
 
-        // Generate translation
+        // Generate translation with timeout protection
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const translation = response.text().trim();
@@ -161,10 +165,26 @@ export default {
 
       } catch (error) {
         console.error('Translation error:', error);
+        
+        // Detailed error messages
+        let errorMessage = 'Translation failed';
+        let errorDetails = error.message;
+
+        if (error.message?.includes('API key')) {
+          errorMessage = 'Invalid API key';
+          errorDetails = 'Please check your Gemini API key configuration';
+        } else if (error.message?.includes('quota') || error.message?.includes('rate')) {
+          errorMessage = 'API quota exceeded';
+          errorDetails = 'Please wait a moment and try again';
+        } else if (error.message?.includes('model')) {
+          errorMessage = 'Model error';
+          errorDetails = 'The AI model is temporarily unavailable';
+        }
+
         return new Response(
           JSON.stringify({ 
-            error: 'Translation failed', 
-            details: error.message 
+            error: errorMessage, 
+            details: errorDetails
           }),
           { 
             status: 500,

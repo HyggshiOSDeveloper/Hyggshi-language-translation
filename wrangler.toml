@@ -1,5 +1,5 @@
-name = "roblox-translation-api"
-main = "Index.js"
+name = "language-translation"
+main = "index.js"
 compatibility_date = "2024-01-01"
 
 # Environment variables (set these in Cloudflare dashboard)
